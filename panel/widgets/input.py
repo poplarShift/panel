@@ -22,6 +22,10 @@ from bokeh.models.widgets import (
 from ..util import as_unicode
 from .base import Widget
 
+# replace with ..util.is_number once/if #1302 or similar is merged
+from numbers import Number
+def is_number(s):
+    return isinstance(s, Number)
 
 class TextInput(Widget):
 
@@ -201,9 +205,12 @@ class LiteralInput(Widget):
     type = param.ClassSelector(default=None, class_=(type, tuple),
                                is_instance=True)
 
+    format = param.String(default=None, doc="""
+        String method format used for formatting numeric values, e.g. '{:06.3f}'.""")
+
     value = param.Parameter(default=None)
 
-    _rename = {'name': 'title', 'type': None, 'serializer': None}
+    _rename = {'format': None, 'name': 'title', 'type': None, 'serializer': None}
 
     _source_transforms = {'value': """JSON.parse(value.replace(/'/g, '"'))"""}
 
@@ -271,6 +278,8 @@ class LiteralInput(Widget):
                 value = repr(value)
             elif self.serializer == 'json':
                 value = json.dumps(value, sort_keys=True)
+            elif self.format is not None and is_number(value):
+                value = self.format.format(value)
             else:
                 value = as_unicode(value)
             msg['value'] = value
